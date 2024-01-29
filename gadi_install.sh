@@ -3,6 +3,7 @@
 usage="
 Usage:
   A script to install and run an Underworld 3 software stack in Gadi.
+  Based on Julian and Tyagi's scripts
 
 ** To install **
 Review script details: modules, paths, repository urls / branches etc.
@@ -63,15 +64,15 @@ install_python_dependencies(){
 
 
 install_petsc(){
-		source $INSTALL_PATH/bin/activate
+	source $INSTALL_PATH/bin/activate
 
-		cd $CODES_PATH
-		wget https://gitlab.com/lmoresi/petsc/-/archive/main/petsc-${PETSC_VERSION}.tar.gz --no-check-certificate \
-		&& tar -zxf petsc-${PETSC_VERSION}.tar.gz
-		cd $CODES_PATH/petsc-${PETSC_VERSION}
+	cd $CODES_PATH
+	wget https://gitlab.com/lmoresi/petsc/-/archive/main/petsc-${PETSC_VERSION}.tar.gz --no-check-certificate \
+	&& tar -zxf petsc-${PETSC_VERSION}.tar.gz
+	cd $CODES_PATH/petsc-${PETSC_VERSION}
 
-		# install petsc
-		./configure --with-debugging=0 \
+	# install petsc
+	./configure --with-debugging=0 \
                     --prefix=$UW_OPT_DIR/petsc-lm-${PETSC_VERSION}\
 		            --COPTFLAGS="-g -O3" --CXXOPTFLAGS="-g -O3" --FOPTFLAGS="-g -O3" \
 		            --with-petsc4py=1               \
@@ -93,53 +94,53 @@ install_petsc(){
 		            --download-superlu=1            \
 		            --download-triangle             \
 		            --useThreads=0                  \
-		&& make PETSC_DIR=`pwd` PETSC_ARCH=arch-linux-c-opt all    \
-		&& make PETSC_DIR=`pwd` PETSC_ARCH=arch-linux-c-opt install
+	&& make PETSC_DIR=`pwd` PETSC_ARCH=arch-linux-c-opt all    \
+	&& make PETSC_DIR=`pwd` PETSC_ARCH=arch-linux-c-opt install
 
-        cd $CDIR
+    cd $CDIR
 
 }
 
 install_underworld3(){
-		source $INSTALL_PATH/bin/activate
+	source $INSTALL_PATH/bin/activate
 
-		${GIT_COMMAND} $USER_HOME/uw3 \
-		&& cd $USER_HOME/uw3 \
-		&& ./clean.sh \
-		&& python3 setup.py develop
-        source pypathsetup.sh
-		python3 -m pytest -v
+	${GIT_COMMAND} $USER_HOME/uw3 \
+	&& cd $USER_HOME/uw3 \
+	&& ./clean.sh \
+	&& python3 setup.py develop
+    source pypathsetup.sh
+	python3 -m pytest -v
 
-		cd $CDIR
+	cd $CDIR
 }
 
 check_openmpi_exists(){
-        source $INSTALL_PATH/bin/activate
-        return $(python3 -c "from mpi4py import MPI")
+    source $INSTALL_PATH/bin/activate
+    return $(python3 -c "from mpi4py import MPI")
 }
 
 check_petsc_exists(){
-        source $INSTALL_PATH/bin/activate
-        return $(python3 -c "from petsc4py import PETSc")
+    source $INSTALL_PATH/bin/activate
+    return $(python3 -c "from petsc4py import PETSc")
 }
 
 check_underworld3_exists(){
-        source $INSTALL_PATH/bin/activate
-        return $(python3 -c "import underworld3")
+    source $INSTALL_PATH/bin/activate
+    return $(python3 -c "import underworld3")
 }
 
 
 install_full_stack(){
 
-		install_python_dependencies
+    install_python_dependencies
 
-        if ! check_petsc_exists; then
-          install_petsc
-        fi
+    if ! check_petsc_exists; then
+        install_petsc
+    fi
 
-        if ! check_underworld3_exists; then
-          install_underworld3
-        fi
+    if ! check_underworld3_exists; then
+        install_underworld3
+    fi
 }
 
 if [ ! -d "$INSTALL_PATH" ]
