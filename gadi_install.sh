@@ -27,11 +27,11 @@ while getopts ':h' option; do
 done
 
 module purge
-module load openmpi/4.1.4 hdf5/1.12.2 python3/3.11.0 gmsh/4.4.1 cmake
+module load openmpi/4.1.4 hdf5/1.12.2p python3/3.11.0 gmsh/4.4.1 cmake
 
 export GROUP=el06
 export USER=jg0883
-export INSTALL_NAME=UWGeodynamics3_0.9
+export INSTALL_NAME=Underworld3_0.9
 
 # Louis' branch: boundary_integrals
 GIT_COMMAND="git clone --branch boundary_integrals --depth 1 https://github.com/underworldcode/underworld3.git"
@@ -47,10 +47,13 @@ export OMPI_MCA_io=ompio    # preferred MPI IO implementation
 export CDIR=$PWD
 
 export PETSC_VERSION="main"
-export PYTHONPATH=$UW_OPT_DIR/petsc-lm-${PETSC_VERSION}/lib:$PYTHONPATH
-export PETSC_DIR=$UW_OPT_DIR/petsc-lm-${PETSC_VERSION}
+export PYTHONPATH=$CODES_PATH/petsc-${PETSC_VERSION}/arch-linux-c-opt/lib:$PYTHONPATH # set for petsc4py usage
+#export PYTHONPATH=$UW_OPT_DIR/petsc-lm-${PETSC_VERSION}/lib:$PYTHONPATH
+export PETSC_DIR=$CODES_PATH/petsc-${PETSC_VERSION} # do not set prefix to separate dir for now
+#export PETSC_DIR=$UW_OPT_DIR/petsc-lm-${PETSC_VERSION}
 export PETSC_ARCH=arch-linux-c-opt
 export PYTHONPATH=$INSTALL_PATH/lib/python3.11/site-packages:${PYTHONPATH} # is this needed?
+
 
 install_python_dependencies(){
 	source $INSTALL_PATH/bin/activate
@@ -59,6 +62,7 @@ install_python_dependencies(){
     pip3 install --no-binary :all: --no-cache-dir mpi4py
 	pip3 install --no-cache-dir pytest
     pip3 install --upgrade --force-reinstall --no-cache-dir typing-extensions
+    export HDF5_VERSION=1.12.2
     HDF5_MPI="ON" pip3 install --no-binary :all: --no-cache-dir h5py
 }
 
@@ -71,9 +75,10 @@ install_petsc(){
 	&& tar -zxf petsc-${PETSC_VERSION}.tar.gz
 	cd $CODES_PATH/petsc-${PETSC_VERSION}
 
+    # for now, do not set prefix to a separate directory
 	# install petsc
-	./configure --with-debugging=0 \
-                    --prefix=$UW_OPT_DIR/petsc-lm-${PETSC_VERSION}\
+    #--prefix=$UW_OPT_DIR/petsc-lm-${PETSC_VERSION}\
+	./configure --with-debugging=0                  \
 		            --COPTFLAGS="-g -O3" --CXXOPTFLAGS="-g -O3" --FOPTFLAGS="-g -O3" \
 		            --with-petsc4py=1               \
 		            --with-zlib=1                   \
@@ -94,10 +99,11 @@ install_petsc(){
 		            --download-superlu=1            \
 		            --download-triangle             \
 		            --useThreads=0                  \
-	&& make PETSC_DIR=`pwd` PETSC_ARCH=arch-linux-c-opt all    \
-	&& make PETSC_DIR=`pwd` PETSC_ARCH=arch-linux-c-opt install
+	&& make PETSC_DIR=`pwd` PETSC_ARCH=arch-linux-c-opt all    #\
+	#&& make PETSC_DIR=`pwd` PETSC_ARCH=arch-linux-c-opt install
 
     cd $CDIR
+
 
 }
 
