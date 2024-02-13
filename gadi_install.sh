@@ -28,13 +28,13 @@ done
 
 module purge
 module load openmpi/4.1.4 hdf5/1.12.2p python3/3.11.0 gmsh/4.4.1 cmake
+#module load openmpi/4.1.4 python3/3.11.0 gmsh/4.4.1 cmake # without hdf
 
 export GROUP=el06
 export USER=jg0883
 export INSTALL_NAME=Underworld3_0.9
 
-# Louis' branch: boundary_integrals
-GIT_COMMAND="git clone --branch boundary_integrals --depth 1 https://github.com/underworldcode/underworld3.git"
+GIT_COMMAND="git clone --branch development --depth 1 https://github.com/underworldcode/underworld3.git"
 
 export USER_HOME=/home/157/jg0883/
 export CODES_PATH=/scratch/$GROUP/$USER/codes/
@@ -77,6 +77,10 @@ install_petsc(){
 
     # for now, do not set prefix to a separate directory
 	# install petsc
+                    #--download-hdf5=1               \
+                    #--with-hdf5=1                   \
+                    #--download-h5py=1               \
+                    #--with-h5py=1                   \
     #--prefix=$UW_OPT_DIR/petsc-lm-${PETSC_VERSION}\
 	./configure --with-debugging=0                  \
 		            --COPTFLAGS="-g -O3" --CXXOPTFLAGS="-g -O3" --FOPTFLAGS="-g -O3" \
@@ -108,10 +112,13 @@ install_petsc(){
 }
 
 install_underworld3(){
+
+    #HDF5_MPI="ON" pip3 install --no-binary :all: --no-cache-dir h5py
 	source $INSTALL_PATH/bin/activate
 
-	${GIT_COMMAND} $USER_HOME/uw3 \
-	&& cd $USER_HOME/uw3 \
+	#${GIT_COMMAND} $USER_HOME/uw3 \
+	#&& cd $USER_HOME/uw3 \
+	cd $USER_HOME/uw3 \
 	&& ./clean.sh \
 	&& python3 setup.py develop
     source pypathsetup.sh
