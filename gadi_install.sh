@@ -32,12 +32,15 @@ module load openmpi/4.1.4 hdf5/1.12.2p python3/3.11.0 gmsh/4.4.1 cmake
 
 export GROUP=el06
 export USER=jg0883
-export INSTALL_NAME=Underworld3_0.9
+#export INSTALL_NAME=Underworld3_0.9
+export INSTALL_NAME=Underworld3_0.9_23022024
 
 GIT_COMMAND="git clone --branch development --depth 1 https://github.com/underworldcode/underworld3.git"
 
 export USER_HOME=/home/157/jg0883/
-export CODES_PATH=/scratch/$GROUP/$USER/codes/
+export CODES_PATH=/scratch/$GROUP/$USER/codes/uw3_23022024
+#export CODES_PATH=/scratch/$GROUP/$USER/codes/ # original
+
 export UW_OPT_DIR=$CODES_PATH/opt
 export INSTALL_PATH=$CODES_PATH/$INSTALL_NAME
 
@@ -71,7 +74,8 @@ install_petsc(){
 	source $INSTALL_PATH/bin/activate
 
 	cd $CODES_PATH
-	wget https://gitlab.com/lmoresi/petsc/-/archive/main/petsc-${PETSC_VERSION}.tar.gz --no-check-certificate \
+	#wget https://gitlab.com/lmoresi/petsc/-/archive/main/petsc-${PETSC_VERSION}.tar.gz --no-check-certificate \
+	wget https://gitlab.com/petsc/petsc/-/archive/main/petsc-${PETSC_VERSION}.tar.gz --no-check-certificate \
 	&& tar -zxf petsc-${PETSC_VERSION}.tar.gz
 	cd $CODES_PATH/petsc-${PETSC_VERSION}
 
@@ -116,9 +120,9 @@ install_underworld3(){
     #HDF5_MPI="ON" pip3 install --no-binary :all: --no-cache-dir h5py
 	source $INSTALL_PATH/bin/activate
 
-	#${GIT_COMMAND} $USER_HOME/uw3 \
+	#${GIT_COMMAND} ${CODES_PATH}/uw3 \
 	#&& cd $USER_HOME/uw3 \
-	cd $USER_HOME/uw3 \
+	cd ${CODES_PATH}/uw3 \
 	&& ./clean.sh \
 	&& python3 setup.py develop
     source pypathsetup.sh
