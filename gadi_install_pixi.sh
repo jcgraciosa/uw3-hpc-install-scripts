@@ -147,42 +147,8 @@ install_mpi4py() {
 
 install_petsc() {
     echo "==> Building PETSc with AMR tools (~1 hour)..."
-
-    mkdir -p "${UW3_PATH}/petsc-custom"
-    cd "${UW3_PATH}/petsc-custom"
-
-    git clone --branch release --depth 1 https://gitlab.com/petsc/petsc.git
-    cd petsc
-
-    ./configure --with-debugging=0                  \
-                --COPTFLAGS="-g -O3" --CXXOPTFLAGS="-g -O3" --FOPTFLAGS="-g -O3" \
-                --with-petsc4py=1               \
-                --with-shared-libraries=1       \
-                --with-cxx-dialect=C++11        \
-                --with-make-np=40               \
-                --with-hdf5-dir="${HDF5_DIR}"   \
-                --download-zlib=1               \
-                --download-mmg=1                \
-                --download-parmmg=1             \
-                --download-mumps=1              \
-                --download-slepc=1              \
-                --download-bison=1              \
-                --download-ptscotch=1           \
-                --download-parmetis=1           \
-                --download-metis=1              \
-                --download-superlu=1            \
-                --download-hypre=1              \
-                --download-scalapack=1          \
-                --download-superlu_dist=1       \
-                --download-pragmatic=1          \
-                --download-ctetgen              \
-                --download-eigen                \
-                --download-triangle             \
-                --useThreads=0                  \
-    && make PETSC_DIR="$(pwd)" PETSC_ARCH="${PETSC_ARCH}" all
-
+    bash "${UW3_PATH}/petsc-custom/build-petsc-gadi.sh"
     export PYTHONPATH="${PETSC_DIR}/${PETSC_ARCH}/lib:${PYTHONPATH}"
-    cd "${CDIR}"
     echo "==> PETSc installed"
 }
 
