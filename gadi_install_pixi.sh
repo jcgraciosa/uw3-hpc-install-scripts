@@ -141,7 +141,7 @@ install_pixi_env() {
 
 install_mpi4py() {
     echo "==> Building mpi4py from source against Gadi OpenMPI..."
-    pip install --no-binary :all: --no-cache-dir "mpi4py>=4,<5"
+    pip install --no-binary :all: --no-cache-dir --force-reinstall "mpi4py>=4,<5"
     echo "==> mpi4py installed"
 }
 
