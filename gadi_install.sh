@@ -27,18 +27,19 @@ while getopts ':h' option; do
 done
 
 module purge
-module load openmpi/4.1.4 hdf5/1.12.2p python3/3.11.0 gmsh/4.4.1 cmake
+module load openmpi/4.1.5 hdf5/1.12.2p python3/3.12.1 gmsh/4.11.1 cmake/3.24.2
 #module load openmpi/4.1.4 python3/3.11.0 gmsh/4.4.1 cmake # without hdf
 
-export GROUP=el06
+export GROUP=m18
 export USER=jg0883
-#export INSTALL_NAME=Underworld3_0.9
-export INSTALL_NAME=Underworld3_0.9_23022024
+export INSTALL_NAME=uw3_03Sep2025
+export BRANCH_NAME=development
 
+GIT_COMMAND_H5PY="git clone https://github.com/h5py/h5py.git"
 GIT_COMMAND="git clone --branch development --depth 1 https://github.com/underworldcode/underworld3.git"
 
 export USER_HOME=/home/157/jg0883/
-export CODES_PATH=/scratch/$GROUP/$USER/codes/uw3_23022024
+export CODES_PATH=/g/data/$GROUP/$USER/codes/uw3_03Sep2025
 #export CODES_PATH=/scratch/$GROUP/$USER/codes/ # original
 
 export UW_OPT_DIR=$CODES_PATH/opt
@@ -49,24 +50,42 @@ export OMPI_MCA_io=ompio    # preferred MPI IO implementation
 
 export CDIR=$PWD
 
-export PETSC_VERSION="main"
-export PYTHONPATH=$CODES_PATH/petsc-${PETSC_VERSION}/arch-linux-c-opt/lib:$PYTHONPATH # set for petsc4py usage
-#export PYTHONPATH=$UW_OPT_DIR/petsc-lm-${PETSC_VERSION}/lib:$PYTHONPATH
-export PETSC_DIR=$CODES_PATH/petsc-${PETSC_VERSION} # do not set prefix to separate dir for now
-#export PETSC_DIR=$UW_OPT_DIR/petsc-lm-${PETSC_VERSION}
+#export PETSC_VERSION="main"
+export PYTHONPATH=$CODES_PATH/petsc/arch-linux-c-opt/lib:$PYTHONPATH # set for petsc4py usage
+export PETSC_DIR=$CODES_PATH/petsc # do not set prefix to separate dir for now
 export PETSC_ARCH=arch-linux-c-opt
-export PYTHONPATH=$INSTALL_PATH/lib/python3.11/site-packages:${PYTHONPATH} # is this needed?
+export PYTHONPATH=$INSTALL_PATH/lib/python3.12/site-packages:${PYTHONPATH} # is this needed?
 
 
 install_python_dependencies(){
 	source $INSTALL_PATH/bin/activate
-    pip3 install --upgrade pip==23.0 --no-binary :all:
-	pip3 install --upgrade --force-reinstall --no-cache-dir cython
-    pip3 install --no-binary :all: --no-cache-dir mpi4py
-	pip3 install --no-cache-dir pytest
-    pip3 install --upgrade --force-reinstall --no-cache-dir typing-extensions
+    #pip install --upgrade pip==23.0 --no-binary :all:
+    python -m ensurepip --upgrade
+    pip install --upgrade setuptools
+    pip install --upgrade pip
+	pip install --upgrade --force-reinstall --no-cache-dir cython==3.0.11
+    pip install --no-binary :all: --no-cache-dir mpi4py
+    pip install --no-binary :all: --no-cache-dir cmake
+    pip install pygmsh
+    #pip install --no-binary :all: --no-cache-dir pygmsh # won't work if other options are put
+	pip install --no-cache-dir pytest
+    pip install --upgrade --force-reinstall --no-cache-dir typing-extensions
+}
+
+install_h5py(){
+	source $INSTALL_PATH/bin/activate
+
+    ${GIT_COMMAND_H5PY} ${CODES_PATH}/h5py_main
+	cd ${CODES_PATH}/h5py_main
+
     export HDF5_VERSION=1.12.2
-    HDF5_MPI="ON" pip3 install --no-binary :all: --no-cache-dir h5py
+    HDF5_MPI="ON" pip install -v .
+
+    cd $CDIR
+
+    # as of Sep 2025, using h5py 3.14.0 with pip 25
+    HDF5_MPI="ON" pip install --no-binary :all: --no-cache-dir h5py    # new but does not work with pip 24.0
+
 }
 
 
@@ -74,10 +93,14 @@ install_petsc(){
 	source $INSTALL_PATH/bin/activate
 
 	cd $CODES_PATH
-	#wget https://gitlab.com/lmoresi/petsc/-/archive/main/petsc-${PETSC_VERSION}.tar.gz --no-check-certificate \
-	wget https://gitlab.com/petsc/petsc/-/archive/main/petsc-${PETSC_VERSION}.tar.gz --no-check-certificate \
-	&& tar -zxf petsc-${PETSC_VERSION}.tar.gz
-	cd $CODES_PATH/petsc-${PETSC_VERSION}
+
+    #wget https://gitlab.com/petsc/petsc/-/archive/main/petsc-${PETSC_VERSION}.tar.gz --no-check-certificate \
+	#&& tar -zxf petsc-${PETSC_VERSION}.tar.gz
+	#cd $CODES_PATH/petsc-${PETSC_VERSION}
+
+    PETSC_VERSION="v3.21.5"
+    git clone --branch $PETSC_VERSION --depth 1 https://gitlab.com/petsc/petsc.git
+    cd petsc
 
     # for now, do not set prefix to a separate directory
 	# install petsc
@@ -89,12 +112,17 @@ install_petsc(){
 	./configure --with-debugging=0                  \
 		            --COPTFLAGS="-g -O3" --CXXOPTFLAGS="-g -O3" --FOPTFLAGS="-g -O3" \
 		            --with-petsc4py=1               \
-		            --with-zlib=1                   \
 		            --with-shared-libraries=1       \
 		            --with-cxx-dialect=C++11        \
-		            --with-make-np=4                \
+		            --with-make-np=40               \
                     --with-hdf5-dir=$HDF5_DIR       \
+		            --download-zlib=1               \
+		            --download-mmg=1                \
+		            --download-parmmg=1             \
 		            --download-mumps=1              \
+		            --download-slepc=1              \
+		            --download-bison=1              \
+		            --download-ptscotch=1           \
 		            --download-parmetis=1           \
 		            --download-metis=1              \
 		            --download-superlu=1            \
@@ -117,14 +145,13 @@ install_petsc(){
 
 install_underworld3(){
 
-    #HDF5_MPI="ON" pip3 install --no-binary :all: --no-cache-dir h5py
 	source $INSTALL_PATH/bin/activate
 
-	#${GIT_COMMAND} ${CODES_PATH}/uw3 \
-	#&& cd $USER_HOME/uw3 \
-	cd ${CODES_PATH}/uw3 \
+	#${GIT_COMMAND} ${CODES_PATH}/${BRANCH_NAME} \
+	cd ${CODES_PATH}/${BRANCH_NAME} \
 	&& ./clean.sh \
-	&& python3 setup.py develop
+	&& ./compile.sh
+    # python3 setup.py develop # change with compile.sh
     source pypathsetup.sh
 	python3 -m pytest -v
 
