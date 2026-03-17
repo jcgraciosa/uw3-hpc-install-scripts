@@ -160,7 +160,6 @@ install_petsc() {
                 --with-shared-libraries=1       \
                 --with-cxx-dialect=C++11        \
                 --with-make-np=40               \
-                --with-mpi-dir="${MPI_DIR}"     \
                 --with-hdf5-dir="${HDF5_DIR}"   \
                 --download-zlib=1               \
                 --download-mmg=1                \
