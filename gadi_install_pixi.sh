@@ -77,7 +77,7 @@ export CDIR=$PWD
 
 load_env() {
     module purge
-    module load openmpi/4.1.5 hdf5/1.12.2p gmsh/4.11.1 cmake/3.24.2
+    module load openmpi/4.1.7 hdf5/1.12.2p gmsh/4.13.1 cmake/3.31.6
 
     export MPI_DIR
     MPI_DIR="$(dirname "$(dirname "$(which mpicc)")")"
@@ -151,8 +151,7 @@ install_petsc() {
     mkdir -p "${UW3_PATH}/petsc-custom"
     cd "${UW3_PATH}/petsc-custom"
 
-    local PETSC_VERSION="v3.21.5"
-    git clone --branch "${PETSC_VERSION}" --depth 1 https://gitlab.com/petsc/petsc.git
+    git clone --branch release --depth 1 https://gitlab.com/petsc/petsc.git
     cd petsc
 
     ./configure --with-debugging=0                  \
