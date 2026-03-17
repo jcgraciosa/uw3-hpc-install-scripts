@@ -46,7 +46,9 @@ done
 # ============================================================
 
 export UW3_BRANCH=development
-export UW3_REPO="https://github.com/underworldcode/underworld3.git"
+#export UW3_REPO="https://github.com/underworldcode/underworld3.git"
+export UW3_REPO="https://github.com/jcgraciosa/underworld3.git"
+
 
 # DDMonYY naming convention — update this for each new install
 export INSTALL_NAME=uw3-development-17Mar26
