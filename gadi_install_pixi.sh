@@ -193,8 +193,9 @@ install_h5py() {
     # conda's libhdf5.so.310 BEFORE Gadi's libhdf5.so.200 in the search order.
     # Use patchelf to reorder: move HDF5_DIR to the front of every h5py .so.
     local _h5py_dir
-    _h5py_dir="$(python3 -c "import h5py, os; print(os.path.dirname(h5py.__file__))" 2>/dev/null)"
-    if [ -n "${_h5py_dir}" ] && command -v patchelf &>/dev/null; then
+    # Use pip show — importing h5py would fail if the symbol is already broken.
+    _h5py_dir="$(pip show h5py 2>/dev/null | grep -i '^Location:' | awk '{print $2}')/h5py"
+    if [ -d "${_h5py_dir}" ] && command -v patchelf &>/dev/null; then
         echo "==> Fixing h5py RPATH order via patchelf (putting Gadi HDF5 first)..."
         for _so in "${_h5py_dir}"/*.cpython*.so; do
             [ -f "${_so}" ] || continue
