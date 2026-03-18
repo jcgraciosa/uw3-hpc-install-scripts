@@ -161,7 +161,7 @@ install_h5py() {
     HDF5_MPI="ON" \
     HDF5_DIR="${HDF5_DIR}" \
     HDF5_VERSION="1.12.2" \
-    CFLAGS="-I${HDF5_DIR}/include" \
+    CFLAGS="-I${HDF5_DIR}/include -include ${HDF5_DIR}/include/H5FDmpio.h" \
     LDFLAGS="-L${HDF5_DIR}/lib -Wl,-rpath,${HDF5_DIR}/lib" \
     pip install --no-binary=h5py --no-cache-dir --force-reinstall --no-deps h5py
     echo "==> h5py installed"
