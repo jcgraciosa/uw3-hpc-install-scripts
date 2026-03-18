@@ -187,6 +187,29 @@ install_h5py() {
         CFLAGS="-I${HDF5_DIR}/include -include ${HDF5_DIR}/include/hdf5.h -include ${HDF5_DIR}/include/H5FDmpio.h" \
         pip install --no-binary=h5py --no-cache-dir --force-reinstall --no-deps h5py
     )
+
+    # Meson/setuptools automatically adds the Python interpreter's lib dir
+    # (conda env lib) to RPATH when building a Python extension, which puts
+    # conda's libhdf5.so.310 BEFORE Gadi's libhdf5.so.200 in the search order.
+    # Use patchelf to reorder: move HDF5_DIR to the front of every h5py .so.
+    local _h5py_dir
+    _h5py_dir="$(python3 -c "import h5py, os; print(os.path.dirname(h5py.__file__))" 2>/dev/null)"
+    if [ -n "${_h5py_dir}" ] && command -v patchelf &>/dev/null; then
+        echo "==> Fixing h5py RPATH order via patchelf (putting Gadi HDF5 first)..."
+        for _so in "${_h5py_dir}"/*.cpython*.so; do
+            [ -f "${_so}" ] || continue
+            local _cur
+            _cur="$(patchelf --print-rpath "${_so}" 2>/dev/null)"
+            # Only prepend if not already first
+            if [ -n "${_cur}" ] && [ "${_cur#${HDF5_DIR}/lib}" = "${_cur}" ]; then
+                patchelf --set-rpath "${HDF5_DIR}/lib:${_cur}" "${_so}"
+            fi
+        done
+        echo "==> RPATH fixed"
+    else
+        echo "==> WARNING: patchelf not found — h5py RPATH may need manual fix"
+        echo "    Install patchelf: pixi add -e gadi patchelf --manifest-path ${PIXI_MANIFEST}"
+    fi
     echo "==> h5py installed"
 }
 
