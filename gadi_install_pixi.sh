@@ -170,7 +170,9 @@ install_h5py() {
 install_uw3() {
     echo "==> Installing Underworld3..."
     cd "${UW3_PATH}"
-    pip install -e .
+    # --no-build-isolation: use the already-built petsc4py from PYTHONPATH
+    # rather than letting pip download and rebuild it from PyPI in a fresh env.
+    pip install --no-build-isolation -e .
     cd "${CDIR}"
     echo "==> Underworld3 installed"
 }
@@ -179,6 +181,15 @@ fix_permissions() {
     echo "==> Setting shared read permissions on ${BASE_PATH}..."
     chmod -R a+rX "${BASE_PATH}"
     find "${BASE_PATH}" -type d -exec chmod a+x {} +
+    # PETSc is on scratch (symlinked from gdata) — chmod doesn't follow symlinks
+    # so we must set permissions on the real scratch path explicitly.
+    local _real_petsc
+    _real_petsc="$(readlink -f "${PETSC_DIR}")"
+    if [ -d "${_real_petsc}" ] && [ "${_real_petsc}" != "${PETSC_DIR}" ]; then
+        echo "==> Setting permissions on PETSc scratch path: ${_real_petsc}"
+        chmod -R a+rX "${_real_petsc}"
+        find "${_real_petsc}" -type d -exec chmod a+x {} +
+    fi
     echo "==> Permissions set"
 }
 
@@ -203,10 +214,12 @@ import underworld3 as uw
 print(f'underworld3 OK — version: {uw.__version__}')
 "
     echo ""
-    echo "==> MPI test (4 ranks):"
-    mpirun -n 4 python3 -c \
-        "from mpi4py import MPI; print(f'Rank {MPI.COMM_WORLD.rank} of {MPI.COMM_WORLD.size} OK')"
+    echo "==> Single-process MPI import check:"
+    python3 -c "from mpi4py import MPI; print(f'mpi4py MPI import OK (rank 0 of 1)')"
     echo "==> All checks passed"
+    echo ""
+    echo "    NOTE: Multi-rank MPI tests must be run from a compute node (PBS job)."
+    echo "    Example: mpirun -n 4 python3 -c \"from mpi4py import MPI; print(MPI.COMM_WORLD.rank)\""
 }
 
 # ============================================================
