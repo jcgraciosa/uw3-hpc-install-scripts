@@ -154,16 +154,23 @@ install_petsc() {
 
 install_h5py() {
     echo "==> Building h5py against Gadi HDF5 module..."
-    # --no-deps: prevent pip from replacing source-built mpi4py or pixi numpy
-    # HDF5_VERSION: Gadi module version string is "1.12.2p" which h5py cannot
-    # parse — override with the numeric-only version (same fix as gadi_install.sh)
-    CC=mpicc \
-    HDF5_MPI="ON" \
-    HDF5_DIR="${HDF5_DIR}" \
-    HDF5_VERSION="1.12.2" \
-    CFLAGS="-I${HDF5_DIR}/include -include ${HDF5_DIR}/include/hdf5.h -include ${HDF5_DIR}/include/H5FDmpio.h" \
-    LDFLAGS="-L${HDF5_DIR}/lib -Wl,-rpath,${HDF5_DIR}/lib" \
-    pip install --no-binary=h5py --no-cache-dir --force-reinstall --no-deps h5py
+    # Run in a subshell so the unsets don't affect the parent shell.
+    # LIBRARY_PATH/CPATH are set by the pixi/conda activation and point to the
+    # conda-forge HDF5 1.14 in the pixi env. If not unset, the linker picks up
+    # conda's libhdf5.so.310 instead of Gadi's 1.12.2p, causing a symbol error
+    # (H5E_BADATOM_g was removed in HDF5 1.14).
+    # HDF5_VERSION: Gadi module string "1.12.2p" is unparseable by h5py — override.
+    # Gadi's hdf5.h does not include H5FDmpio.h, so we force-include it via CFLAGS.
+    (
+        unset LIBRARY_PATH CPATH C_INCLUDE_PATH CPLUS_INCLUDE_PATH
+        CC=mpicc \
+        HDF5_MPI="ON" \
+        HDF5_DIR="${HDF5_DIR}" \
+        HDF5_VERSION="1.12.2" \
+        CFLAGS="-I${HDF5_DIR}/include -include ${HDF5_DIR}/include/hdf5.h -include ${HDF5_DIR}/include/H5FDmpio.h" \
+        LDFLAGS="-L${HDF5_DIR}/lib -Wl,-rpath,${HDF5_DIR}/lib" \
+        pip install --no-binary=h5py --no-cache-dir --force-reinstall --no-deps h5py
+    )
     echo "==> h5py installed"
 }
 
