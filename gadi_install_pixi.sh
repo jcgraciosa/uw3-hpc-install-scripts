@@ -155,9 +155,12 @@ install_petsc() {
 install_h5py() {
     echo "==> Building h5py against Gadi HDF5 module..."
     # --no-deps: prevent pip from replacing source-built mpi4py or pixi numpy
+    # HDF5_VERSION: Gadi module version string is "1.12.2p" which h5py cannot
+    # parse — override with the numeric-only version (same fix as gadi_install.sh)
     CC=mpicc \
     HDF5_MPI="ON" \
     HDF5_DIR="${HDF5_DIR}" \
+    HDF5_VERSION="1.12.2" \
     pip install --no-binary=h5py --no-cache-dir --force-reinstall --no-deps h5py
     echo "==> h5py installed"
 }
