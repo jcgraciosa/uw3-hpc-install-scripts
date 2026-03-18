@@ -162,13 +162,17 @@ install_h5py() {
     # HDF5_VERSION: Gadi module string "1.12.2p" is unparseable by h5py — override.
     # Gadi's hdf5.h does not include H5FDmpio.h, so we force-include it via CFLAGS.
     (
-        unset LIBRARY_PATH CPATH C_INCLUDE_PATH CPLUS_INCLUDE_PATH
+        # Unset all conda compiler/linker env vars so they don't bleed into the
+        # h5py build. In particular, conda's LDFLAGS embeds -L and -rpath for the
+        # conda env lib dir, which causes the linker to pick up conda's
+        # libhdf5.so.310 (HDF5 1.14) instead of Gadi's 1.12.2p.
+        unset LDFLAGS LIBRARY_PATH CPATH C_INCLUDE_PATH CPLUS_INCLUDE_PATH
+        export LDFLAGS="-L${HDF5_DIR}/lib -Wl,-rpath,${HDF5_DIR}/lib"
         CC=mpicc \
         HDF5_MPI="ON" \
         HDF5_DIR="${HDF5_DIR}" \
         HDF5_VERSION="1.12.2" \
         CFLAGS="-I${HDF5_DIR}/include -include ${HDF5_DIR}/include/hdf5.h -include ${HDF5_DIR}/include/H5FDmpio.h" \
-        LDFLAGS="-L${HDF5_DIR}/lib -Wl,-rpath,${HDF5_DIR}/lib" \
         pip install --no-binary=h5py --no-cache-dir --force-reinstall --no-deps h5py
     )
     echo "==> h5py installed"
