@@ -168,6 +168,10 @@ install_h5py() {
         # libhdf5.so.310 (HDF5 1.14) instead of Gadi's 1.12.2p.
         unset LDFLAGS LIBRARY_PATH CPATH C_INCLUDE_PATH CPLUS_INCLUDE_PATH
         export LDFLAGS="-L${HDF5_DIR}/lib -Wl,-rpath,${HDF5_DIR}/lib"
+        # Also reset LD_LIBRARY_PATH — on Linux the dynamic linker checks it at
+        # link time too, so conda's libhdf5.so.310 would otherwise still be found
+        # even after unsetting LDFLAGS and LIBRARY_PATH.
+        export LD_LIBRARY_PATH="${HDF5_DIR}/lib:${MPI_DIR}/lib"
         CC=mpicc \
         HDF5_MPI="ON" \
         HDF5_DIR="${HDF5_DIR}" \
