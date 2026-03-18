@@ -160,26 +160,30 @@ install_petsc() {
 
 install_h5py() {
     echo "==> Building h5py against Gadi HDF5 module..."
-    # Run in a subshell so the unsets don't affect the parent shell.
-    # LIBRARY_PATH/CPATH are set by the pixi/conda activation and point to the
-    # conda-forge HDF5 1.14 in the pixi env. If not unset, the linker picks up
-    # conda's libhdf5.so.310 instead of Gadi's 1.12.2p, causing a symbol error
-    # (H5E_BADATOM_g was removed in HDF5 1.14).
-    # HDF5_VERSION: Gadi module string "1.12.2p" is unparseable by h5py — override.
-    # Gadi's hdf5.h does not include H5FDmpio.h, so we force-include it via CFLAGS.
+    # The conda gadi env ships HDF5 1.14 (serial) as a transitive dependency.
+    # h5py's meson build finds it via cmake config files in the conda env
+    # regardless of LDFLAGS/LD_LIBRARY_PATH, causing the built .so to embed
+    # DT_NEEDED: libhdf5.so.310 (conda 1.14) instead of libhdf5.so.200 (Gadi
+    # 1.12.2p). At runtime, H5E_BADATOM_g (removed in 1.14) is undefined.
+    #
+    # Fix: temporarily rename conda's libhdf5 files so meson can only find
+    # Gadi's HDF5. Restore them immediately after the build.
+
+    local _conda_lib="${UW3_PATH}/.pixi/envs/gadi/lib"
+    local _hidden=()
+    for _f in "${_conda_lib}"/libhdf5*.so*; do
+        [ -f "${_f}" ] && [[ "${_f}" != *.h5build ]] || continue
+        mv "${_f}" "${_f}.h5build"
+        _hidden+=("${_f}")
+    done
+    [ ${#_hidden[@]} -gt 0 ] && echo "  Hid ${#_hidden[@]} conda HDF5 lib(s) for clean build"
+
     (
-        # Unset all conda compiler/linker env vars so they don't bleed into the
-        # h5py build. In particular, conda's LDFLAGS embeds -L and -rpath for the
-        # conda env lib dir, which causes the linker to pick up conda's
-        # libhdf5.so.310 (HDF5 1.14) instead of Gadi's 1.12.2p.
         unset LDFLAGS LIBRARY_PATH CPATH C_INCLUDE_PATH CPLUS_INCLUDE_PATH
-        # --disable-new-dtags: embed DT_RPATH instead of DT_RUNPATH so the
-        # baked-in rpath takes precedence over LD_LIBRARY_PATH at runtime.
         export LDFLAGS="-L${HDF5_DIR}/lib -Wl,--disable-new-dtags,-rpath,${HDF5_DIR}/lib"
-        # Also reset LD_LIBRARY_PATH — on Linux the dynamic linker checks it at
-        # link time too, so conda's libhdf5.so.310 would otherwise still be found
-        # even after unsetting LDFLAGS and LIBRARY_PATH.
         export LD_LIBRARY_PATH="${HDF5_DIR}/lib:${MPI_DIR}/lib"
+        # HDF5_VERSION: Gadi module string "1.12.2p" is unparseable by h5py.
+        # Gadi's hdf5.h does not include H5FDmpio.h, so we force-include it.
         CC=mpicc \
         HDF5_MPI="ON" \
         HDF5_DIR="${HDF5_DIR}" \
@@ -187,30 +191,15 @@ install_h5py() {
         CFLAGS="-I${HDF5_DIR}/include -include ${HDF5_DIR}/include/hdf5.h -include ${HDF5_DIR}/include/H5FDmpio.h" \
         pip install --no-binary=h5py --no-cache-dir --force-reinstall --no-deps h5py
     )
+    local _rc=$?
 
-    # Meson/setuptools automatically adds the Python interpreter's lib dir
-    # (conda env lib) to RPATH when building a Python extension, which puts
-    # conda's libhdf5.so.310 BEFORE Gadi's libhdf5.so.200 in the search order.
-    # Use patchelf to reorder: move HDF5_DIR to the front of every h5py .so.
-    local _h5py_dir
-    # Use pip show — importing h5py would fail if the symbol is already broken.
-    _h5py_dir="$(pip show h5py 2>/dev/null | grep -i '^Location:' | awk '{print $2}')/h5py"
-    if [ -d "${_h5py_dir}" ] && command -v patchelf &>/dev/null; then
-        echo "==> Fixing h5py RPATH order via patchelf (putting Gadi HDF5 first)..."
-        for _so in "${_h5py_dir}"/*.cpython*.so; do
-            [ -f "${_so}" ] || continue
-            local _cur
-            _cur="$(patchelf --print-rpath "${_so}" 2>/dev/null)"
-            # Only prepend if not already first
-            if [ -n "${_cur}" ] && [ "${_cur#${HDF5_DIR}/lib}" = "${_cur}" ]; then
-                patchelf --set-rpath "${HDF5_DIR}/lib:${_cur}" "${_so}"
-            fi
-        done
-        echo "==> RPATH fixed"
-    else
-        echo "==> WARNING: patchelf not found — h5py RPATH may need manual fix"
-        echo "    Install patchelf: pixi add -e gadi patchelf --manifest-path ${PIXI_MANIFEST}"
-    fi
+    # Always restore conda's HDF5 libs regardless of build outcome
+    for _f in "${_hidden[@]}"; do
+        mv "${_f}.h5build" "${_f}"
+    done
+    [ ${#_hidden[@]} -gt 0 ] && echo "  Restored ${#_hidden[@]} conda HDF5 lib(s)"
+
+    [ $_rc -ne 0 ] && { echo "ERROR: h5py build failed (rc=$_rc)"; return $_rc; }
     echo "==> h5py installed"
 }
 
