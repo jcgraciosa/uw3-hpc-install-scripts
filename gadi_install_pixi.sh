@@ -92,6 +92,12 @@ load_env() {
         fi
     fi
 
+    # Prepend Gadi's HDF5 lib dir AFTER pixi shell-hook, so it takes precedence
+    # over conda's serial libhdf5.so.310 (HDF5 1.14) which pixi adds to
+    # LD_LIBRARY_PATH. DT_RUNPATH in h5py.so is checked after LD_LIBRARY_PATH,
+    # so without this the wrong HDF5 is loaded at runtime.
+    export LD_LIBRARY_PATH="${HDF5_DIR}/lib:${LD_LIBRARY_PATH}"
+
     # PETSc + petsc4py
     if [ -d "${PETSC_DIR}/${PETSC_ARCH}" ]; then
         export PYTHONPATH="${PETSC_DIR}/${PETSC_ARCH}/lib:${PYTHONPATH}"
@@ -167,7 +173,9 @@ install_h5py() {
         # conda env lib dir, which causes the linker to pick up conda's
         # libhdf5.so.310 (HDF5 1.14) instead of Gadi's 1.12.2p.
         unset LDFLAGS LIBRARY_PATH CPATH C_INCLUDE_PATH CPLUS_INCLUDE_PATH
-        export LDFLAGS="-L${HDF5_DIR}/lib -Wl,-rpath,${HDF5_DIR}/lib"
+        # --disable-new-dtags: embed DT_RPATH instead of DT_RUNPATH so the
+        # baked-in rpath takes precedence over LD_LIBRARY_PATH at runtime.
+        export LDFLAGS="-L${HDF5_DIR}/lib -Wl,--disable-new-dtags,-rpath,${HDF5_DIR}/lib"
         # Also reset LD_LIBRARY_PATH — on Linux the dynamic linker checks it at
         # link time too, so conda's libhdf5.so.310 would otherwise still be found
         # even after unsetting LDFLAGS and LIBRARY_PATH.
