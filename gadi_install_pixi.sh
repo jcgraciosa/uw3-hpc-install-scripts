@@ -103,6 +103,11 @@ load_env() {
         export PYTHONPATH="${PETSC_DIR}/${PETSC_ARCH}/lib:${PYTHONPATH}"
     fi
 
+    # Prevent Python from searching ~/.local/lib/python*/site-packages.
+    # User-installed packages there can shadow pixi env packages and cause
+    # import failures (e.g. old typing_extensions lacking Sentinel).
+    export PYTHONNOUSERSITE=1
+
     export OPENBLAS_NUM_THREADS=1
     export OMPI_MCA_io=ompio
 
